@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rotograma Santos 2.0</title>
+  <meta name="theme-color" content="#0f172a" />
+  <style>
+    :root{
+      --bg:#0f172a;--card:#111827;--card2:#1f2937;--text:#f8fafc;--muted:#cbd5e1;--line:#334155;
+      --green:#22c55e;--blue:#38bdf8;--yellow:#facc15;--red:#ef4444;--orange:#fb923c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,#0f172a,#020617);color:var(--text)}
+    header{padding:22px 16px;text-align:center;background:#020617;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+    header h1{margin:0;font-size:25px} header p{margin:6px 0 0;color:var(--muted);font-size:14px}
+    main{max-width:980px;margin:0 auto;padding:14px 12px 80px}
+    .panel{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:18px;padding:14px;margin:12px 0;box-shadow:0 12px 30px rgba(0,0,0,.28)}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    input,textarea,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#020617;color:var(--text);font-size:15px;outline:none}
+    textarea{min-height:75px;resize:vertical}.search{font-size:18px;padding:15px}
+    button,a.btn{border:0;border-radius:12px;padding:11px 13px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:6px;color:#031018;background:var(--blue)}
+    button.secondary{background:var(--card2);color:var(--text);border:1px solid var(--line)} button.green{background:var(--green)} button.yellow{background:var(--yellow)} button.red{background:var(--red);color:white} button.orange{background:var(--orange)}
+    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.actions button,.actions a{flex:1;min-width:120px}
+    .route{background:#020617;border:1px solid var(--line);border-radius:17px;padding:14px;margin:10px 0}.route h3{margin:0 0 8px;font-size:18px}.tag{display:inline-block;background:#1e293b;border:1px solid var(--line);padding:5px 8px;border-radius:999px;margin:2px;color:var(--muted);font-size:13px}
+    .muted{color:var(--muted)}.small{font-size:13px}.hidden{display:none}.count{color:var(--yellow);font-weight:700;margin:8px 0}.danger{color:#fecaca}.success{color:#bbf7d0}
+    footer{position:fixed;bottom:0;left:0;right:0;background:#020617;border-top:1px solid var(--line);padding:8px 10px;text-align:center;color:var(--muted);font-size:12px}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}.grid2{grid-template-columns:1fr} header h1{font-size:21px}.actions button,.actions a{min-width:46%}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>🚛 Rotograma Santos 2.0</h1>
+  <p>Pesquise, cadastre, compartilhe e abra rotas no Google Maps ou Waze</p>
+</header>
+<main>
+  <section class="panel">
+    <input id="search" class="search" placeholder="🔍 Pesquisar por cidade, cliente, ida, volta, km..." oninput="renderRoutes()" />
+    <div class="actions">
+      <button class="green" onclick="toggleForm()">➕ Nova rota</button>
+      <button class="yellow" onclick="exportBackup()">💾 Backup</button>
+      <button class="orange" onclick="document.getElementById('importFile').click()">📥 Importar</button>
+      <button class="secondary" onclick="installInfo()">📱 Instalar</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importBackup(event)" />
+    <p id="msg" class="small muted"></p>
+  </section>
+
+  <section id="formPanel" class="panel hidden">
+    <h2 id="formTitle">Adicionar nova rota</h2>
+    <input type="hidden" id="editId">
+    <div class="grid2">
+      <input id="cidade" placeholder="Cidade. Ex: AGUDOS" />
+      <input id="cliente" placeholder="Cliente. Ex: DEXCO" />
+    </div><br>
+    <div class="grid">
+      <select id="sentido"><option>IDA</option><option>VOLTA</option><option>IDA/VOLTA</option><option>OUTRO</option></select>
+      <input id="km" placeholder="KM. Ex: 398 km" />
+      <input id="duracao" placeholder="Duração. Ex: 3h55m" />
+      <input id="pedagio" placeholder="Pedágio. Ex: 6 eixos R$576 / 9 eixos R$864" />
+    </div><br>
+    <textarea id="obs" placeholder="Observações: ponto de coleta, restrição, referência, horário, etc."></textarea><br><br>
+    <input id="link" placeholder="Link Google Maps ou Waze da rota" />
+    <div class="actions">
+      <button class="green" onclick="saveRoute()">✅ Salvar rota</button>
+      <button class="secondary" onclick="clearForm()">Limpar</button>
+      <button class="red" onclick="toggleForm(false)">Cancelar</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="count" id="count"></div>
+    <div id="routes"></div>
+  </section>
+</main>
+<footer>Rotograma Santos 2.0 • dados salvos neste aparelho • faça backup regularmente</footer>
+<script>
+const KEY='rotograma_santos_2_0';
+const defaultRoutes = [
+ ['OLIMPIA','FRIOVALE','IDA','546 km','5h25m','',''],
+ ['AGUDOS','DEXCO','IDA','398 km','3h55m','6 eixos R$ 576,00 / 9 eixos R$ 864',''],
+ ['AGUDOS','DEXCO','VOLTA','400 km','4h05m','R$ 1.280,70',''],
+ ['ANDRADAS','KOHLER','IDA','','','',''],['ANDRADAS','KOHLER','VOLTA','','','',''],['ARAGUARI','PRIMA FOODS','IDA','','','',''],['ARAGUARI','PRIMA FOODS','VOLTA','','','',''],
+ ['ATIBAIA','LAR PLÁSTICOS','IDA','','','',''],['ATIBAIA','LAR PLÁSTICOS','VOLTA','','','',''],['BLUMENAU','SCHNEIDER','IDA','','','',''],['BLUMENAU','SCHNEIDER','VOLTA','','','',''],
+ ['BOTUCATU','EUCATEX','IDA','','','',''],['BOTUCATU','EUCATEX','VOLTA','','','',''],['BRAGANÇA PAULISTA','SANTHER','IDA','','','',''],['BRAGANÇA PAULISTA','SANTHER','VOLTA','','','',''],
+ ['CABREÚVA','PIRELLI','IDA','','','',''],['CABREÚVA','PIRELLI','VOLTA','','','',''],['CAÇAPAVA','CEBRACE','IDA','','','',''],['CAÇAPAVA','CEBRACE','VOLTA','','','',''],
+ ['CAJAMAR','PENSKE','IDA','','','',''],['CAJAMAR','PENSKE','VOLTA','','','',''],['DUQUE DE CAXIAS','VIA VAREJO','IDA','','','',''],['DUQUE DE CAXIAS','VIA VAREJO','VOLTA','','','',''],
+ ['EXTREMA','BALL','IDA','','','',''],['EXTREMA','BALL','VOLTA','','','',''],['EXTREMA','MULTILASER','IDA','','','',''],['EXTREMA','MULTILASER','VOLTA','','','',''],
+ ['FRUTAL','BALL','IDA','','','',''],['FRUTAL','BALL','VOLTA','','','',''],['INDAIATUBA','UNILEVER','IDA','','','',''],['ITAPECERICA DA SERRA','NAZA LOGÍSTICA','IDA','','','',''],['ITAPECERICA DA SERRA','NAZA LOGÍSTICA','VOLTA','','','',''],
+ ['ITAPETININGA','DEXCO','IDA','','','',''],['ITAPETININGA','DEXCO','VOLTA','','','',''],['ITAPEVI','CHEMAX','IDA','','','',''],['ITAPEVI','CHEMAX','VOLTA','','','',''],
+ ['ITUPEVA','BELENUS','OUTRO','','','',''],['ITUPEVA','PANASONIC','IDA','','','',''],['ITUPEVA','PANASONIC','VOLTA','','','',''],['JACAREÍ','BALL','IDA','','','',''],['JACAREÍ','BALL','VOLTA','','','',''],['JACAREÍ','CEBRACE','IDA','','','',''],['JACAREÍ','CEBRACE','VOLTA','','','',''],
+ ['JUNDIAÍ','CONTRAIL','IDA','','','',''],['JUNDIAÍ','CONTRAIL','VOLTA','','','',''],['LIMEIRA','SERENA','IDA','','','',''],['LIMEIRA','SERENA','VOLTA','','','',''],
+ ['ORINDIÚVA','CORBION PRODUTOS','IDA','','','',''],['ORINDIÚVA','CORBION PRODUTOS','VOLTA','','','',''],['OSASCO','MERITOR','IDA','','','',''],
+ ['PIRACICABA','HYUNDAI - LS','IDA','','','',''],['PIRACICABA','HYUNDAI - LS','VOLTA','','','',''],['PIRACICABA','HYUNDAI - RODOTREM','IDA','','','',''],['PIRACICABA','HYUNDAI - RODOTREM','VOLTA','','','',''],
+ ['RIO CLARO','WHIRLPOOL','IDA','','','',''],['RIO CLARO','WHIRLPOOL','VOLTA','','','',''],['SALTO','EUCATEX','IDA','','','',''],['SALTO','EUCATEX','VOLTA','','','',''],
+ ['SÃO CARLOS','ELECTROLUX','IDA','','','',''],['SÃO CARLOS','ELECTROLUX','VOLTA','','','',''],['SÃO ROQUE','HERSHEY','IDA','','','',''],['SÃO ROQUE','HERSHEY','VOLTA','','','',''],
+ ['SÃO SEBASTIÃO DO PARAÍSO','PENEIRA ALTA','IDA','','','',''],['SÃO SEBASTIÃO DO PARAÍSO','PENEIRA ALTA','VOLTA','','','',''],['VARGINHA','PÁSSARO ARMAZÉNS','IDA','','','',''],['VARGINHA','PÁSSARO ARMAZÉNS','VOLTA','','','',''],
+ ['VINHEDO','AVERY DENNISON','IDA','','','',''],['VINHEDO','AVERY DENNISON','VOLTA','','','',''],['VINHEDO','BELENUS','IDA','','','','']
+].map((r,i)=>({id:Date.now()+i,cidade:r[0],cliente:r[1],sentido:r[2],km:r[3],duracao:r[4],pedagio:r[5],obs:'',link:r[6]}));
+function load(){let data=localStorage.getItem(KEY); if(!data){localStorage.setItem(KEY,JSON.stringify(defaultRoutes)); return defaultRoutes} try{return JSON.parse(data)}catch(e){return defaultRoutes}}
+function save(data){localStorage.setItem(KEY,JSON.stringify(data))}
+function routeTitle(r){return `${r.cidade||''} (${r.cliente||''}${r.sentido? ' / '+r.sentido:''})`.replace('( /','(')}
+function mapLink(r){ if(r.link) return r.link; return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(`${r.cidade} ${r.cliente}`); }
+function wazeLink(r){ return 'https://waze.com/ul?q='+encodeURIComponent(`${r.cidade} ${r.cliente}`)+'&navigate=yes'; }
+function whatsappText(r){ return `🚛 Rotograma Santos\n\nRota: ${routeTitle(r)}\nKM: ${r.km||'-'}\nDuração: ${r.duracao||'-'}\nPedágio: ${r.pedagio||'-'}\nObs: ${r.obs||'-'}\n\nAbrir rota: ${mapLink(r)}`; }
+function shareRoute(id){ const r=load().find(x=>x.id==id); const text=whatsappText(r); if(navigator.share){navigator.share({title:routeTitle(r),text:text,url:mapLink(r)}).catch(()=>{})} else {window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank')} }
+function renderRoutes(){ const q=document.getElementById('search').value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); const data=load(); const filtered=data.filter(r=>JSON.stringify(r).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(q)); document.getElementById('count').textContent=`${filtered.length} rota(s) encontrada(s) de ${data.length} cadastrada(s)`; document.getElementById('routes').innerHTML=filtered.map(r=>`<div class="route"><h3>${routeTitle(r)}</h3><div>${r.km?`<span class="tag">📏 ${r.km}</span>`:''}${r.duracao?`<span class="tag">⏱️ ${r.duracao}</span>`:''}${r.pedagio?`<span class="tag">💰 ${r.pedagio}</span>`:''}</div>${r.obs?`<p class="muted">${r.obs}</p>`:'<p class="muted small">Clique para abrir ou compartilhar a rota.</p>'}<div class="actions"><a class="btn" target="_blank" href="${mapLink(r)}">🗺️ Maps</a><a class="btn" target="_blank" href="${wazeLink(r)}">🚦 Waze</a><button class="green" onclick="shareRoute(${r.id})">📲 WhatsApp</button><button class="yellow" onclick="editRoute(${r.id})">✏️ Editar</button><button class="red" onclick="deleteRoute(${r.id})">🗑️ Excluir</button></div></div>`).join('') || '<p class="muted">Nenhuma rota encontrada.</p>'; }
+function toggleForm(show){ const el=document.getElementById('formPanel'); if(show===false) el.classList.add('hidden'); else el.classList.toggle('hidden'); }
+function clearForm(){['editId','cidade','cliente','km','duracao','pedagio','obs','link'].forEach(id=>document.getElementById(id).value=''); document.getElementById('sentido').value='IDA'; document.getElementById('formTitle').textContent='Adicionar nova rota';}
+function saveRoute(){ const id=document.getElementById('editId').value; const r={id:id?Number(id):Date.now(),cidade:cidade.value.trim().toUpperCase(),cliente:cliente.value.trim().toUpperCase(),sentido:sentido.value,km:km.value.trim(),duracao:duracao.value.trim(),pedagio:pedagio.value.trim(),obs:obs.value.trim(),link:link.value.trim()}; if(!r.cidade){msg('Digite pelo menos a cidade da rota.','danger');return} let data=load(); if(id){data=data.map(x=>x.id==id?r:x)}else{data.unshift(r)} save(data); clearForm(); toggleForm(false); renderRoutes(); msg('Rota salva com sucesso.','success')}
+function editRoute(id){ const r=load().find(x=>x.id==id); if(!r)return; toggleForm(true); document.getElementById('formTitle').textContent='Editar rota'; editId.value=r.id; cidade.value=r.cidade; cliente.value=r.cliente; sentido.value=r.sentido; km.value=r.km; duracao.value=r.duracao; pedagio.value=r.pedagio; obs.value=r.obs; link.value=r.link; window.scrollTo({top:0,behavior:'smooth'}); }
+function deleteRoute(id){ if(confirm('Excluir esta rota?')){save(load().filter(r=>r.id!=id));renderRoutes();msg('Rota excluída.','danger')}}
+function exportBackup(){ const blob=new Blob([JSON.stringify(load(),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='backup_rotograma_santos_2_0.json'; a.click(); msg('Backup baixado. Guarde esse arquivo.','success')}
+function importBackup(ev){ const file=ev.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=()=>{try{const data=JSON.parse(reader.result); if(!Array.isArray(data)) throw new Error('inválido'); save(data); renderRoutes(); msg('Rotas importadas com sucesso.','success')}catch(e){msg('Arquivo de backup inválido.','danger')}}; reader.readAsText(file); }
+function installInfo(){ alert('Para instalar como app:\n\nAndroid: abra no Chrome > 3 pontinhos > Adicionar à tela inicial.\n\niPhone: abra no Safari > Compartilhar > Adicionar à Tela de Início.\n\nPara enviar por WhatsApp para todos abrirem, publique este arquivo online no GitHub Pages, Netlify ou Google Drive com hospedagem própria.'); }
+function msg(t,c){ const m=document.getElementById('msg'); m.className='small '+(c||'muted'); m.textContent=t; setTimeout(()=>m.textContent='',5000)}
+renderRoutes();
+</script>
+</body>
+</html>
